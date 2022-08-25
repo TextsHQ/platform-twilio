@@ -14,11 +14,13 @@
   },
   "dependencies": {
     "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#main",
-    "react": "https://github.com/TextsHQ/react-global-shim#main"
+    "react": "https://github.com/TextsHQ/react-global-shim#main",
+    "react-phone-number-input": "^3.2.7"
   },
   "devDependencies": {
     "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config#96fdd639e59c240817873eef65087aae3fba959e",
     "@types/node": "^16.11.7",
+    "@types/react-phone-number-input": "^3.0.14",
     "eslint": "^7.23.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
