@@ -12,8 +12,7 @@ const info: PlatformInfo = {
   // eslint-disable-next-line import/extensions
   auth: texts.React?.lazy(() => import('./AuthForm')),
   deletionMode: MessageDeletionMode.UNSUPPORTED,
-  attributes: new Set([
-  ]),
+  attributes: new Set([]),
 }
 
 export default info

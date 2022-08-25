@@ -57,7 +57,9 @@ export default class PlatformX implements PlatformAPI {
     this.loginEventCallback = onEvent
   }
 
-  onConnectionStateChange?: (onEvent: OnConnStateChangeCallback) => Awaitable<void>
+  onConnectionStateChange?: (
+    onEvent: OnConnStateChangeCallback
+  ) => Awaitable<void>
 
   takeoverConflict?: () => Awaitable<void>
 
@@ -65,57 +67,128 @@ export default class PlatformX implements PlatformAPI {
 
   searchThreads?: (typed: string) => Awaitable<Thread[]>
 
-  searchMessages?: (typed: string, pagination?: PaginationArg, threadID?: string) => Awaitable<Paginated<Message>>
+  searchMessages?: (
+    typed: string,
+    pagination?: PaginationArg,
+    threadID?: string
+  ) => Awaitable<Paginated<Message>>
 
   getPresence?: () => Awaitable<PresenceMap>
 
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
-  getThreads: (folderName: string, pagination?: PaginationArg) => Awaitable<Paginated<Thread>>
+  getThreads: (
+    folderName: string,
+    pagination?: PaginationArg
+  ) => Awaitable<Paginated<Thread>>
 
-  getMessages: (threadID: string, pagination?: PaginationArg) => Awaitable<Paginated<Message>>
+  getMessages: (
+    threadID: string,
+    pagination?: PaginationArg
+  ) => Awaitable<Paginated<Message>>
 
-  getThreadParticipants?: (threadID: string, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
+  getThreadParticipants?: (
+    threadID: string,
+    pagination?: PaginationArg
+  ) => Awaitable<Paginated<Participant>>
 
   getThread?: (threadID: string) => Awaitable<Thread>
 
   getMessage?: (messageID: string) => Awaitable<Message>
 
-  getUser?: (ids: { userID?: string } | { username?: string } | { phoneNumber?: string } | { email?: string }) => Awaitable<User>
+  getUser?: (
+    ids:
+    | { userID?: string }
+    | { username?: string }
+    | { phoneNumber?: string }
+    | { email?: string }
+  ) => Awaitable<User>
 
-  createThread: (userIDs: string[], title?: string, messageText?: string) => Awaitable<boolean | Thread>
+  createThread: (
+    userIDs: string[],
+    title?: string,
+    messageText?: string
+  ) => Awaitable<boolean | Thread>
 
   updateThread?: (threadID: string, updates: Partial<Thread>) => Awaitable<void>
 
   deleteThread?: (threadID: string) => Awaitable<void>
 
-  reportThread?: (type: 'spam', threadID: string, firstMessageID?: string) => Awaitable<boolean>
+  reportThread?: (
+    type: 'spam',
+    threadID: string,
+    firstMessageID?: string
+  ) => Awaitable<boolean>
 
-  sendMessage?: (threadID: string, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
+  sendMessage?: (
+    threadID: string,
+    content: MessageContent,
+    options?: MessageSendOptions
+  ) => Promise<boolean | Message[]>
 
-  editMessage?: (threadID: string, messageID: string, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
+  editMessage?: (
+    threadID: string,
+    messageID: string,
+    content: MessageContent,
+    options?: MessageSendOptions
+  ) => Promise<boolean | Message[]>
 
-  forwardMessage?: (threadID: string, messageID: string, threadIDs?: string[], userIDs?: string[]) => Promise<void>
+  forwardMessage?: (
+    threadID: string,
+    messageID: string,
+    threadIDs?: string[],
+    userIDs?: string[]
+  ) => Promise<void>
 
-  sendActivityIndicator: (type: ActivityType, threadID?: string) => Awaitable<void>
+  sendActivityIndicator: (
+    type: ActivityType,
+    threadID?: string
+  ) => Awaitable<void>
 
-  deleteMessage?: (threadID: string, messageID: string, forEveryone?: boolean) => Awaitable<void>
+  deleteMessage?: (
+    threadID: string,
+    messageID: string,
+    forEveryone?: boolean
+  ) => Awaitable<void>
 
-  sendReadReceipt: (threadID: string, messageID: string, messageCursor?: string) => Awaitable<void>
+  sendReadReceipt: (
+    threadID: string,
+    messageID: string,
+    messageCursor?: string
+  ) => Awaitable<void>
 
-  addReaction?: (threadID: string, messageID: string, reactionKey: string) => Awaitable<void>
+  addReaction?: (
+    threadID: string,
+    messageID: string,
+    reactionKey: string
+  ) => Awaitable<void>
 
-  removeReaction?: (threadID: string, messageID: string, reactionKey: string) => Awaitable<void>
+  removeReaction?: (
+    threadID: string,
+    messageID: string,
+    reactionKey: string
+  ) => Awaitable<void>
 
   getLinkPreview?: (link: string) => Awaitable<MessageLink>
 
   addParticipant?: (threadID: string, participantID: string) => Awaitable<void>
 
-  removeParticipant?: (threadID: string, participantID: string) => Awaitable<void>
+  removeParticipant?: (
+    threadID: string,
+    participantID: string
+  ) => Awaitable<void>
 
-  changeParticipantRole?: (threadID: string, participantID: string, role: string) => Awaitable<void>
+  changeParticipantRole?: (
+    threadID: string,
+    participantID: string,
+    role: string
+  ) => Awaitable<void>
 
-  changeThreadImage?: (threadID: string, imageBuffer: Buffer, mimeType: string) => Awaitable<void>
+  changeThreadImage?: (
+    threadID: string,
+    imageBuffer: Buffer,
+    mimeType: string
+  ) => Awaitable<void>
 
   markAsUnread?: (threadID: string, messageID?: string) => Awaitable<void>
 
@@ -129,9 +202,15 @@ export default class PlatformX implements PlatformAPI {
 
   loadDynamicMessage?: (message: Message) => Awaitable<Partial<Message>>
 
-  getAsset?: (_, ...args: string[]) => Awaitable<string | Buffer | FetchInfo | Readable>
+  getAsset?: (
+    _,
+    ...args: string[]
+  ) => Awaitable<string | Buffer | FetchInfo | Readable>
 
-  getOriginalObject?: (objName: 'thread' | 'message', objectID: string) => Awaitable<string>
+  getOriginalObject?: (
+    objName: 'thread' | 'message',
+    objectID: string
+  ) => Awaitable<string>
 
   handleDeepLink?: (link: string) => void
 
