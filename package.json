@@ -13,15 +13,16 @@
     }
   },
   "dependencies": {
-    "@textshq/platform-sdk": "link:../platform-sdk",
-    "react": "https://github.com/TextsHQ/react-global-shim"
+    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#main",
+    "react": "https://github.com/TextsHQ/react-global-shim#main"
   },
   "devDependencies": {
-    "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config",
-    "eslint": "^7.14.0",
-    "husky": "^4.3.0",
+    "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config#96fdd639e59c240817873eef65087aae3fba959e",
+    "@types/node": "^16.11.7",
+    "eslint": "^7.23.0",
+    "husky": "^4.3.6",
     "source-map-support": "^0.5.21",
-    "typescript": "^4.6.0"
+    "typescript": "^4.6.4"
   },
   "packageManager": "yarn@3.2.0"
 }
