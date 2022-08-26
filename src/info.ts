@@ -2,10 +2,9 @@ import { PlatformInfo, MessageDeletionMode } from '@textshq/platform-sdk'
 
 const onNavigate = `
 (async () => {
-  window.__twilioApiCreds = {}
+  window.twilioApiCreds = {}
   if (window.location.href.includes('https://console.twilio.com/')) {
-  setTimeout(() => { console.log('waiting a few seconds for twilio creds...'), 2000 })
-  var buttons = document.getElementsByTagName('button')
+    var buttons = document.getElementsByTagName('button')
     for(var i = 0; i < buttons.length; i++) {
       if(buttons[i].dataset.testid == 'auth-token-toggle-btn') {
           buttons[i].click()
@@ -15,10 +14,12 @@ const onNavigate = `
     const sid = document.getElementById('account-sid').value
     const token = document.getElementById('auth-token').value
     const number = document.getElementById('phone-number').value
-    console.log(sid, token, number)
 
     if(sid && token && number && token.indexOf('---') === -1) {
-      setTimeout(() => window.close(), 100)
+      setTimeout(() => {
+        window.twilioApiCreds = { sid, token, number }
+        window.close()
+       }, 500)
     }
   }
 })()
@@ -37,9 +38,8 @@ const info: PlatformInfo = {
   browserLogins: [{
     loginURL: 'https://twilio.com/login',
     // authCookieName: 'server-identity',
-    runJSOnLaunch: 'window.__twilioApiCreds = {}',
     runJSOnNavigate: onNavigate,
-    runJSOnClose: 'JSON.stringify({\'a\':\'b\'})',
+    runJSOnClose: 'JSON.stringify(window.twilioApiCreds)',
   }],
   deletionMode: MessageDeletionMode.UNSUPPORTED,
   attributes: new Set([]),

@@ -24,6 +24,7 @@ import {
   User,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
+import TwilioAPI from './network-api'
 
 const { IS_DEV } = texts
 
@@ -32,13 +33,24 @@ if (IS_DEV) {
   require('source-map-support').install()
 }
 
-export default class PlatformX implements PlatformAPI {
+export default class PlatformTwilio implements PlatformAPI {
   private accountInfo: AccountInfo
 
   private loginEventCallback?: any
 
+  private api = new TwilioAPI()
+
   init = async (session: SerializedSession, accountInfo: AccountInfo) => {
     this.accountInfo = accountInfo
+
+    if (!session) {
+      texts.error('No session in Twilio init()!')
+      return
+    }
+
+    await this.api.login(session.sid, session.token, session.number)
+
+    texts.log('Twilio.init', { session, accountInfo })
   }
 
   dispose: () => Awaitable<void>
@@ -46,13 +58,20 @@ export default class PlatformX implements PlatformAPI {
   getCurrentUser: () => Awaitable<CurrentUser>
 
   login = async ({ jsCodeResult }: LoginCreds): Promise<LoginResult> => {
-    if (!jsCodeResult) return { type: 'error' }
+    texts.log('TWILIO_CREDS_CUSTOM', JSON.stringify(jsCodeResult, null, 4))
+    if (!jsCodeResult) return { type: 'error', errorMessage: 'jsCodeResult was false for Twilio' }
+    const { sid, token, number } = JSON.parse(jsCodeResult)
+    await this.api.login(sid, token, number)
     return { type: 'success' }
   }
 
   logout?: () => Awaitable<void>
 
-  serializeSession?: () => any
+  serializeSession = () => ({
+    sid: this.api.sid,
+    token: this.api.token,
+    number: this.api.number,
+  })
 
   subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
 
