@@ -45,7 +45,10 @@ export default class PlatformX implements PlatformAPI {
 
   getCurrentUser: () => Awaitable<CurrentUser>
 
-  login: (creds?: LoginCreds) => Promise<LoginResult>
+  login = async ({ jsCodeResult }: LoginCreds): Promise<LoginResult> => {
+    if (!jsCodeResult) return { type: 'error' }
+    return { type: 'success' }
+  }
 
   logout?: () => Awaitable<void>
 

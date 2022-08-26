@@ -1,5 +1,29 @@
 import { PlatformInfo, MessageDeletionMode } from '@textshq/platform-sdk'
 
+const onNavigate = `
+(async () => {
+  window.__twilioApiCreds = {}
+  if (window.location.href.includes('https://console.twilio.com/')) {
+  setTimeout(() => { console.log('waiting a few seconds for twilio creds...'), 2000 })
+  var buttons = document.getElementsByTagName('button')
+    for(var i = 0; i < buttons.length; i++) {
+      if(buttons[i].dataset.testid == 'auth-token-toggle-btn') {
+          buttons[i].click()
+          break
+      }
+    }
+    const sid = document.getElementById('account-sid').value
+    const token = document.getElementById('auth-token').value
+    const number = document.getElementById('phone-number').value
+    console.log(sid, token, number)
+
+    if(sid && token && number && token.indexOf('---') === -1) {
+      setTimeout(() => window.close(), 100)
+    }
+  }
+})()
+`
+
 const info: PlatformInfo = {
   name: 'twilio',
   version: '0.0.1',
@@ -12,7 +36,10 @@ const info: PlatformInfo = {
   loginMode: 'browser',
   browserLogins: [{
     loginURL: 'https://twilio.com/login',
-    authCookieName: 'server-identity',
+    // authCookieName: 'server-identity',
+    runJSOnLaunch: 'window.__twilioApiCreds = {}',
+    runJSOnNavigate: onNavigate,
+    runJSOnClose: 'JSON.stringify({\'a\':\'b\'})',
   }],
   deletionMode: MessageDeletionMode.UNSUPPORTED,
   attributes: new Set([]),
