@@ -55,7 +55,7 @@ export default class PlatformTwilio implements PlatformAPI {
 
   dispose: () => Awaitable<void>
 
-  getCurrentUser: () => Awaitable<CurrentUser>
+  getCurrentUser = () => this.api.getCurrentUser()
 
   login = async ({ jsCodeResult }: LoginCreds): Promise<LoginResult> => {
     texts.log('TWILIO_CREDS_CUSTOM', JSON.stringify(jsCodeResult, null, 4))

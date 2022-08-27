@@ -1,4 +1,4 @@
-import { PlatformInfo, MessageDeletionMode } from '@textshq/platform-sdk'
+import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-sdk'
 
 const onNavigate = `
 (async () => {
@@ -42,7 +42,7 @@ const info: PlatformInfo = {
     runJSOnClose: 'JSON.stringify(window.twilioApiCreds)',
   }],
   deletionMode: MessageDeletionMode.UNSUPPORTED,
-  attributes: new Set([]),
+  attributes: new Set([Attribute.CAN_MESSAGE_PHONE_NUMBER]),
 }
 
 export default info
