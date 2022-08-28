@@ -2,7 +2,6 @@ import {
   AccountInfo,
   ActivityType,
   Awaitable,
-  CurrentUser,
   CustomEmojiMap,
   FetchInfo,
   LoginCreds,
@@ -95,10 +94,6 @@ export default class PlatformTwilio implements PlatformAPI {
     threadID?: string
   ) => Awaitable<Paginated<Message>>
 
-  getPresence?: () => Awaitable<PresenceMap>
-
-  getCustomEmojis?: () => Awaitable<CustomEmojiMap>
-
   getThreads: (
     folderName: string,
     pagination?: PaginationArg
@@ -148,6 +143,50 @@ export default class PlatformTwilio implements PlatformAPI {
     options?: MessageSendOptions
   ) => Promise<boolean | Message[]>
 
+  forwardMessage?: (
+    threadID: string,
+    messageID: string,
+    threadIDs?: string[],
+    userIDs?: string[]
+  ) => Promise<void>
+
+  getLinkPreview?: (link: string) => Awaitable<MessageLink>
+
+  changeThreadImage?: (
+    threadID: string,
+    imageBuffer: Buffer,
+    mimeType: string
+  ) => Awaitable<void>
+
+  markAsUnread?: (threadID: string, messageID?: string) => Awaitable<void>
+
+  archiveThread?: (threadID: string, archived: boolean) => Awaitable<void>
+
+  pinThread?: (threadID: string, pinned: boolean) => Awaitable<void>
+
+  notifyAnyway?: (threadID: string) => Awaitable<void>
+
+  onThreadSelected?: (threadID: string) => Awaitable<void>
+
+  getAsset?: (
+    _,
+    ...args: string[]
+  ) => Awaitable<string | Buffer | FetchInfo | Readable>
+
+  getOriginalObject?: (
+    objName: 'thread' | 'message',
+    objectID: string
+  ) => Awaitable<string>
+
+  handleDeepLink?: (link: string) => void
+
+  /* Unimplemented via Twilio */
+  getPresence?: () => Awaitable<PresenceMap>
+
+  getCustomEmojis?: () => Awaitable<CustomEmojiMap>
+
+  loadDynamicMessage?: (message: Message) => Awaitable<Partial<Message>>
+
   editMessage?: (
     threadID: string,
     messageID: string,
@@ -155,12 +194,18 @@ export default class PlatformTwilio implements PlatformAPI {
     options?: MessageSendOptions
   ) => Promise<boolean | Message[]>
 
-  forwardMessage?: (
+  addParticipant?: (threadID: string, participantID: string) => Awaitable<void>
+
+  removeParticipant?: (
     threadID: string,
-    messageID: string,
-    threadIDs?: string[],
-    userIDs?: string[]
-  ) => Promise<void>
+    participantID: string
+  ) => Awaitable<void>
+
+  changeParticipantRole?: (
+    threadID: string,
+    participantID: string,
+    role: string
+  ) => Awaitable<void>
 
   sendActivityIndicator: (
     type: ActivityType,
@@ -190,51 +235,6 @@ export default class PlatformTwilio implements PlatformAPI {
     messageID: string,
     reactionKey: string
   ) => Awaitable<void>
-
-  getLinkPreview?: (link: string) => Awaitable<MessageLink>
-
-  addParticipant?: (threadID: string, participantID: string) => Awaitable<void>
-
-  removeParticipant?: (
-    threadID: string,
-    participantID: string
-  ) => Awaitable<void>
-
-  changeParticipantRole?: (
-    threadID: string,
-    participantID: string,
-    role: string
-  ) => Awaitable<void>
-
-  changeThreadImage?: (
-    threadID: string,
-    imageBuffer: Buffer,
-    mimeType: string
-  ) => Awaitable<void>
-
-  markAsUnread?: (threadID: string, messageID?: string) => Awaitable<void>
-
-  archiveThread?: (threadID: string, archived: boolean) => Awaitable<void>
-
-  pinThread?: (threadID: string, pinned: boolean) => Awaitable<void>
-
-  notifyAnyway?: (threadID: string) => Awaitable<void>
-
-  onThreadSelected?: (threadID: string) => Awaitable<void>
-
-  loadDynamicMessage?: (message: Message) => Awaitable<Partial<Message>>
-
-  getAsset?: (
-    _,
-    ...args: string[]
-  ) => Awaitable<string | Buffer | FetchInfo | Readable>
-
-  getOriginalObject?: (
-    objName: 'thread' | 'message',
-    objectID: string
-  ) => Awaitable<string>
-
-  handleDeepLink?: (link: string) => void
 
   onResumeFromSleep?: () => void
 }
