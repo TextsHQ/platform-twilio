@@ -94,10 +94,7 @@ export default class PlatformTwilio implements PlatformAPI {
     threadID?: string
   ) => Awaitable<Paginated<Message>>
 
-  getThreads: (
-    folderName: string,
-    pagination?: PaginationArg
-  ) => Awaitable<Paginated<Thread>>
+  getThreads = () => this.api.getThreads()
 
   getMessages: (
     threadID: string,
