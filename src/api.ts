@@ -23,7 +23,11 @@ import {
   User,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
+import { randomBytes } from 'crypto'
+import path from 'path'
+import { promises as fsp } from 'fs'
 import TwilioAPI from './network-api'
+import { TwilioMessageDB } from './message-db'
 
 const { IS_DEV } = texts
 
@@ -39,8 +43,17 @@ export default class PlatformTwilio implements PlatformAPI {
 
   private api = new TwilioAPI()
 
+  private messageDb: TwilioMessageDB
+
+  private dbFileName: string
+
   init = async (session: SerializedSession, accountInfo: AccountInfo) => {
     this.accountInfo = accountInfo
+    this.dbFileName = session?.dbFileName as string || randomBytes(8).toString('hex')
+
+    const dbPath = path.join(accountInfo.dataDirPath, this.dbFileName + '.sqlite')
+    this.messageDb = new TwilioMessageDB({ dbPath })
+    await this.messageDb.init()
 
     if (!session) {
       texts.error('No session in Twilio init()!')
@@ -48,25 +61,38 @@ export default class PlatformTwilio implements PlatformAPI {
     }
 
     await this.api.login(session.sid, session.token, session.number)
-
     texts.log('Twilio.init', { session, accountInfo })
   }
 
-  dispose: () => Awaitable<void>
+  dispose = async () => {}
 
   getCurrentUser = () => this.api.getCurrentUser()
 
   login = async ({ jsCodeResult }: LoginCreds): Promise<LoginResult> => {
-    texts.log('TWILIO_CREDS_CUSTOM', JSON.stringify(jsCodeResult, null, 4))
+    // Make sure we have SID, token and number scraped from user login
     if (!jsCodeResult) return { type: 'error', errorMessage: 'jsCodeResult was false for Twilio' }
     const { sid, token, number } = JSON.parse(jsCodeResult)
     await this.api.login(sid, token, number)
+
+    // Do initial pull of all messages and save to local DB
+    const messages = await this.api.getMessagesOfNumber()
+    await this.messageDb.storeMessages(messages, number)
+
+    texts.log('Twilio.login')
+
     return { type: 'success' }
   }
 
-  logout?: () => Awaitable<void>
+  private deleteAssetsDir = async () => {
+    await fsp.rm(this.accountInfo.dataDirPath, { recursive: true })
+  }
+
+  logout = async () => {
+    await this.deleteAssetsDir()
+  }
 
   serializeSession = () => ({
+    dbFileName: this.dbFileName as string,
     sid: this.api.sid,
     token: this.api.token,
     number: this.api.number,
@@ -94,12 +120,20 @@ export default class PlatformTwilio implements PlatformAPI {
     threadID?: string
   ) => Awaitable<Paginated<Message>>
 
-  getThreads = () => this.api.getThreads()
+  getThreads = async () => {
+    const currentUser = await this.api.getCurrentUser()
+    const threads = await this.messageDb.getAllThreads(currentUser)
+    return threads
+  }
 
-  getMessages: (
+  getMessages = async (
     threadID: string,
-    pagination?: PaginationArg
-  ) => Awaitable<Paginated<Message>>
+    // pagination?: PaginationArg,
+  ) => {
+    const currentUser = await this.api.getCurrentUser()
+    const messages = this.messageDb.getMessagesByThread(threadID, currentUser)
+    return messages
+  }
 
   getThreadParticipants?: (
     threadID: string,

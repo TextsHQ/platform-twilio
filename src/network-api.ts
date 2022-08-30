@@ -1,8 +1,7 @@
 import { Twilio } from 'twilio'
-import type { CurrentUser, Paginated, Thread } from '@textshq/platform-sdk'
+import type { CurrentUser, Message, Paginated } from '@textshq/platform-sdk'
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import { md5 } from './util'
-import { mapThreads } from './mappers'
 
 export default class TwilioAPI {
   private client?: Twilio
@@ -15,10 +14,12 @@ export default class TwilioAPI {
 
   currentUser?: CurrentUser
 
-  // helper function to get messages from and to the account number
-  getMessagesOfNumber = async (): Promise<MessageInstance[]> => {
-    const fromMessages = await this.client?.messages.list({ from: this.number })
-    const toMessages = await this.client?.messages.list({ to: this.number })
+  // Helper function to get messages from and to the account number
+  // User may have multiple numbers for the same account
+  // Optional parameter to filter by date for syncing over time
+  getMessagesOfNumber = async (dateSentAfter?: Date): Promise<MessageInstance[]> => {
+    const fromMessages = await this.client?.messages.list({ from: this.number, ...dateSentAfter })
+    const toMessages = await this.client?.messages.list({ to: this.number, ...dateSentAfter })
     return [...fromMessages, ...toMessages]
       .sort((a, b) =>
         a.dateCreated.getTime() - b.dateCreated.getTime())
@@ -41,14 +42,5 @@ export default class TwilioAPI {
     }
     this.currentUser = currentUser
     return currentUser
-  }
-
-  getThreads = async (): Promise<Paginated<Thread>> => {
-    const messages = await this.getMessagesOfNumber()
-    const threads = mapThreads(messages, this.currentUser)
-    return {
-      hasMore: false,
-      items: threads,
-    }
   }
 }
