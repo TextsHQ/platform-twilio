@@ -23,7 +23,6 @@ import {
   User,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
-import { randomBytes } from 'crypto'
 import path from 'path'
 import { promises as fsp } from 'fs'
 import TwilioAPI from './network-api'
@@ -45,13 +44,10 @@ export default class PlatformTwilio implements PlatformAPI {
 
   private messageDb: TwilioMessageDB
 
-  private dbFileName: string
-
   init = async (session: SerializedSession, accountInfo: AccountInfo) => {
     this.accountInfo = accountInfo
-    this.dbFileName = session?.dbFileName as string || randomBytes(8).toString('hex')
 
-    const dbPath = path.join(accountInfo.dataDirPath, this.dbFileName + '.sqlite')
+    const dbPath = path.join(accountInfo.dataDirPath, 'db.sqlite')
     this.messageDb = new TwilioMessageDB({ dbPath })
     await this.messageDb.init()
 
@@ -95,7 +91,6 @@ export default class PlatformTwilio implements PlatformAPI {
   }
 
   serializeSession = () => ({
-    dbFileName: this.dbFileName as string,
     sid: this.api.sid,
     token: this.api.token,
     number: this.api.number,
@@ -125,8 +120,7 @@ export default class PlatformTwilio implements PlatformAPI {
 
   getThreads = async () => {
     const currentUser = await this.api.getCurrentUser()
-    const threads = await this.messageDb.getAllThreads(currentUser)
-    return threads
+    return this.messageDb.getAllThreads(currentUser)
   }
 
   getMessages = async (
@@ -134,8 +128,7 @@ export default class PlatformTwilio implements PlatformAPI {
     // pagination?: PaginationArg,
   ) => {
     const currentUser = await this.api.getCurrentUser()
-    const messages = this.messageDb.getMessagesByThread(threadID, currentUser)
-    return messages
+    return this.messageDb.getMessagesByThread(threadID, currentUser)
   }
 
   getThreadParticipants?: (
