@@ -10,14 +10,13 @@ import {
   MessageContent,
   MessageLink,
   MessageSendOptions,
-  OnConnStateChangeCallback,
-  OnServerEventCallback,
+  OnConnStateChangeCallback, OnServerEventCallback,
   Paginated,
   PaginationArg,
   Participant,
   PlatformAPI,
   PresenceMap,
-  SerializedSession,
+  SerializedSession, ServerEventType,
   texts,
   Thread,
   User,
@@ -25,6 +24,7 @@ import {
 import type { Readable } from 'stream'
 import path from 'path'
 import { promises as fsp } from 'fs'
+import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import TwilioAPI from './network-api'
 import { TwilioMessageDB } from './message-db'
 
@@ -44,6 +44,17 @@ export default class PlatformTwilio implements PlatformAPI {
 
   private messageDb: TwilioMessageDB
 
+  disposed = false
+
+  private pullRecentMessages = async (): Promise<MessageInstance[]> => {
+    const lastTimestamp = this.messageDb.getLastTimestamp()
+    const newMessages = await this.api.getMessagesOfNumber(new Date(lastTimestamp))
+    if (newMessages.length > 0) {
+      await this.messageDb.storeMessages(newMessages, this.api.number)
+    }
+    return newMessages
+  }
+
   init = async (session: SerializedSession, accountInfo: AccountInfo) => {
     this.accountInfo = accountInfo
 
@@ -57,13 +68,50 @@ export default class PlatformTwilio implements PlatformAPI {
     }
 
     await this.api.login(session.sid, session.token, session.number)
-    const lastTimestamp = this.messageDb.getLastTimestamp()
-    const newMessages = await this.api.getMessagesOfNumber(new Date(lastTimestamp))
-    await this.messageDb.storeMessages(newMessages, this.api.number)
+    await this.pullRecentMessages()
     texts.log('Twilio.init', { session, accountInfo })
   }
 
-  dispose = async () => {}
+  private pollTimeout: NodeJS.Timeout
+
+  private lastUserUpdatesFetch: number
+
+  private pollUserUpdates = async (): Promise<Set<string>> => {
+    clearTimeout(this.pollTimeout)
+    if (this.disposed) return
+    // 8 seconds for now for refreshing user updates
+    texts.log('polling user updates for twiliio')
+    let nextFetchTimeoutMs = 8_000
+    let messages: MessageInstance[] = []
+    try {
+      messages = await this.pullRecentMessages()
+      this.lastUserUpdatesFetch = Date.now()
+    } catch (err) {
+      nextFetchTimeoutMs = 60_000
+    }
+    this.pollTimeout = setTimeout(this.pollUserUpdates, nextFetchTimeoutMs)
+    return new Set(messages.map(m => m.from))
+  }
+
+  subscribeToEvents = async (onEvent: OnServerEventCallback): Promise<void> => {
+    const threadsToUpdate = await this.pollUserUpdates()
+    onEvent([{
+      type: ServerEventType.STATE_SYNC,
+      objectIDs: {},
+      objectName: 'thread',
+      mutationType: 'update',
+      entries: Array.from(threadsToUpdate),
+    }])
+  }
+
+  dispose = () => {
+    this.disposed = true
+    clearTimeout(this.pollTimeout)
+  }
+
+  reconnectRealtime = () => {
+    if ((Date.now() - this.lastUserUpdatesFetch) > 5_000) this.pollUserUpdates()
+  }
 
   getCurrentUser = () => this.api.getCurrentUser()
 
@@ -95,8 +143,6 @@ export default class PlatformTwilio implements PlatformAPI {
     token: this.api.token,
     number: this.api.number,
   })
-
-  subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
 
   onLoginEvent = (onEvent: Function) => {
     this.loginEventCallback = onEvent

@@ -71,7 +71,6 @@ export class TwilioMessageDB {
     for (const message of messages) {
       const otherParticipant = message.from === currentUser ? message.to : message.from
       const isSender = message.from === currentUser
-      texts.log('twilio store messages: ', message.sid, message.body, otherParticipant, isSender, message.dateCreated)
       insertMessage.run(
         message.sid,
         message.body,
