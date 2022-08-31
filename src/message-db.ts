@@ -16,8 +16,6 @@ export interface MessageObject {
 
 export class TwilioMessageDB {
   private twilioSchema = `
-    CREATE TABLE version (version integer primary key);
-
     CREATE TABLE messages (
       "id" TEXT not null primary key,
       "body" TEXT not null,
@@ -31,8 +29,6 @@ export class TwilioMessageDB {
   private readonly dbPath: string
 
   private statementCache: Map<string, Statement>
-
-  private version = 1
 
   constructor({ dbPath }: { dbPath: string }) {
     this.dbPath = dbPath
@@ -48,7 +44,7 @@ export class TwilioMessageDB {
 
   private createTables = async () => {
     this.db.exec(this.twilioSchema)
-    this.prepareCache('insert into version values (?)').run(this.version)
+    this.db.pragma('user_version = 1')
   }
 
   async init() {
@@ -62,7 +58,7 @@ export class TwilioMessageDB {
     if (
       !(this.prepareCache(
         'select name from sqlite_master where type = ? and name = ?',
-      ).get('table', 'version'))
+      ).get('table', 'messages'))
     ) {
       await this.createTables()
     }
