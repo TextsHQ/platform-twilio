@@ -18,9 +18,6 @@ export class TwilioMessageDB {
   private twilioSchema = `
     CREATE TABLE version (version integer primary key);
 
-    CREATE TABLE threads (
-    );
-
     CREATE TABLE messages (
       "id" TEXT not null primary key,
       "body" TEXT not null,

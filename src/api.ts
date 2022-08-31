@@ -61,6 +61,9 @@ export default class PlatformTwilio implements PlatformAPI {
     }
 
     await this.api.login(session.sid, session.token, session.number)
+    const lastTimestamp = this.messageDb.getLastTimestamp()
+    const newMessages = await this.api.getMessagesOfNumber(new Date(lastTimestamp))
+    await this.messageDb.storeMessages(newMessages, this.api.number)
     texts.log('Twilio.init', { session, accountInfo })
   }
 
@@ -168,11 +171,14 @@ export default class PlatformTwilio implements PlatformAPI {
     firstMessageID?: string
   ) => Awaitable<boolean>
 
-  sendMessage?: (
+  sendMessage = async (
     threadID: string,
-    content: MessageContent,
-    options?: MessageSendOptions
-  ) => Promise<boolean | Message[]>
+    msgContent: MessageContent,
+  ): Promise<boolean | Message[]> => {
+    const { text } = msgContent
+    const message = await this.api.sendMessage(threadID, text)
+    return message ? [message] : false
+  }
 
   forwardMessage?: (
     threadID: string,

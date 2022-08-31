@@ -2,6 +2,8 @@ import { Twilio } from 'twilio'
 import type { CurrentUser, Message, Paginated } from '@textshq/platform-sdk'
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import { md5 } from './util'
+import { mapMessage } from './mappers'
+import type { MessageObject } from './message-db'
 
 export default class TwilioAPI {
   private client?: Twilio
@@ -42,5 +44,19 @@ export default class TwilioAPI {
     }
     this.currentUser = currentUser
     return currentUser
+  }
+
+  sendMessage = async (threadId: string, text: string): Promise<Message> => {
+    const message = await this.client.messages
+      .create({ from: this.number, body: text, to: threadId })
+    const messageObject: MessageObject = {
+      id: message.sid,
+      body: message.body,
+      otherParticipant: message.to,
+      isSender: true,
+      timestamp: message.dateCreated.getTime(),
+    }
+
+    return mapMessage(messageObject, this.currentUser)
   }
 }

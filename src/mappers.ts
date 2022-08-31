@@ -45,6 +45,7 @@ export function mapThreads(messages: MessageObject[], currentUser: User): Thread
     }
     const participants: User[] = [currentUser, otherParticipantUser]
     const thread: Thread = {
+      title: otherParticipant,
       id: threadId,
       isUnread: true,
       isReadOnly: false,
