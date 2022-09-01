@@ -1,5 +1,5 @@
 import { Twilio } from 'twilio'
-import type { CurrentUser, Message, Paginated } from '@textshq/platform-sdk'
+import type { CurrentUser, Message } from '@textshq/platform-sdk'
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import { md5 } from './util'
 import { mapMessage } from './mappers'
@@ -20,11 +20,11 @@ export default class TwilioAPI {
   // User may have multiple numbers for the same account
   // Optional parameter to filter by date for syncing over time
   getMessagesOfNumber = async (dateSentAfter?: Date): Promise<MessageInstance[]> => {
-    const fromMessages = await this.client?.messages.list({ from: this.number, ...dateSentAfter })
-    const toMessages = await this.client?.messages.list({ to: this.number, ...dateSentAfter })
+    const fromMessages = await this.client?.messages.list({ from: this.number, dateSentAfter })
+    const toMessages = await this.client?.messages.list({ to: this.number, dateSentAfter })
     return [...fromMessages, ...toMessages]
       .sort((a, b) =>
-        a.dateCreated.getTime() - b.dateCreated.getTime())
+        a.dateSent.getTime() - b.dateSent.getTime())
   }
 
   login = async (sid: string, token: string, number: string) => {
@@ -54,6 +54,7 @@ export default class TwilioAPI {
       body: message.body,
       otherParticipant: message.to,
       isSender: true,
+      // using dateCreated since dateSent isn't available until message is delivered
       timestamp: message.dateCreated.getTime(),
     }
 

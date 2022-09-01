@@ -1,4 +1,5 @@
 import type { Message, Thread, User } from '@textshq/platform-sdk'
+import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import { md5 } from './util'
 import type { MessageObject } from './message-db'
 
@@ -24,6 +25,22 @@ export function mapMessages(messages: MessageObject[], currentUser: User): Messa
     mappedMessages.push(mapMessage(message, currentUser))
   }
   return mappedMessages
+}
+
+export function mapMessagesToObjects(messages: MessageInstance[], currentUser: User): MessageObject[] {
+  const messageObjects = []
+  for (const message of messages) {
+    const otherParticipant = message.from === currentUser.phoneNumber ? message.to : message.from
+    const isSender = message.from === currentUser.phoneNumber
+    messageObjects.push({
+      id: message.sid,
+      body: message.body,
+      otherParticipant,
+      isSender,
+      timestamp: message.dateSent.getTime(),
+    })
+  }
+  return messageObjects
 }
 
 export function mapThreads(messages: MessageObject[], currentUser: User): Thread[] {

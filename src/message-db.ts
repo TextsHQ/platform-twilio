@@ -4,7 +4,7 @@ import { promises as fsp } from 'fs'
 import { dirname } from 'path'
 import { Message, Paginated, texts, Thread, User } from '@textshq/platform-sdk'
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
-import { mapMessages, mapThreads } from './mappers'
+import { mapMessages, mapMessagesToObjects, mapThreads } from './mappers'
 
 export interface MessageObject {
   id: string
@@ -64,26 +64,26 @@ export class TwilioMessageDB {
     }
   }
 
-  storeMessages = (messages: MessageInstance[], currentUser: string) => {
+  storeMessages = (messages: MessageInstance[], currentUser: User) => {
     const insertMessage = this.prepareCache(
       'insert or replace into messages (id, body, otherParticipant, isSender, timestamp) values (?, ?, ?, ?, ?)',
     )
-    for (const message of messages) {
-      const otherParticipant = message.from === currentUser ? message.to : message.from
-      const isSender = message.from === currentUser
+    const messageObjects = mapMessagesToObjects(messages, currentUser)
+    for (const message of messageObjects) {
       insertMessage.run(
-        message.sid,
+        message.id,
         message.body,
-        otherParticipant,
-        isSender ? 1 : 0,
-        message.dateCreated.getTime(),
+        message.otherParticipant,
+        message.isSender ? 1 : 0,
+        message.timestamp,
       )
     }
   }
 
   getLastTimestamp = (): Date => {
     const { timestamp } = this.prepareCache('select max(timestamp) as timestamp from messages').get()
-    return timestamp
+    // add 1 second to avoid duplicate messages with twilio DB
+    return new Date(timestamp + 2000)
   }
 
   getAllThreads = async (currentUser: User): Promise<Paginated<Thread>> => {
