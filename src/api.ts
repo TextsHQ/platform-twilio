@@ -10,14 +10,13 @@ import {
   MessageContent,
   MessageLink,
   MessageSendOptions,
-  OnConnStateChangeCallback,
-  OnServerEventCallback,
+  OnConnStateChangeCallback, OnServerEventCallback,
   Paginated,
   PaginationArg,
   Participant,
   PlatformAPI,
   PresenceMap,
-  SerializedSession,
+  SerializedSession, ServerEventType,
   texts,
   Thread,
   User,
@@ -25,8 +24,10 @@ import {
 import type { Readable } from 'stream'
 import path from 'path'
 import { promises as fsp } from 'fs'
+import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import TwilioAPI from './network-api'
 import { TwilioMessageDB } from './message-db'
+import { mapMessagesToObjects, mapThreads } from './mappers'
 
 const { IS_DEV } = texts
 
@@ -44,6 +45,19 @@ export default class PlatformTwilio implements PlatformAPI {
 
   private messageDb: TwilioMessageDB
 
+  disposed = false
+
+  onServerEvent: OnServerEventCallback
+
+  private pullRecentMessages = async (): Promise<MessageInstance[]> => {
+    const mostRecentMessageDate = this.messageDb.getLastTimestamp()
+    const newMessages = await this.api.getMessagesOfNumber(mostRecentMessageDate)
+    if (newMessages.length > 0) {
+      await this.messageDb.storeMessages(newMessages, await this.getCurrentUser())
+    }
+    return newMessages
+  }
+
   init = async (session: SerializedSession, accountInfo: AccountInfo) => {
     this.accountInfo = accountInfo
 
@@ -57,13 +71,54 @@ export default class PlatformTwilio implements PlatformAPI {
     }
 
     await this.api.login(session.sid, session.token, session.number)
-    const lastTimestamp = this.messageDb.getLastTimestamp()
-    const newMessages = await this.api.getMessagesOfNumber(new Date(lastTimestamp))
-    await this.messageDb.storeMessages(newMessages, this.api.number)
-    texts.log('Twilio.init', { session, accountInfo })
+    await this.pullRecentMessages()
   }
 
-  dispose = async () => {}
+  private pollTimeout: NodeJS.Timeout
+
+  private lastUserUpdatesFetch: number
+
+  private pollUserUpdates = async (): Promise<Thread[]> => {
+    clearTimeout(this.pollTimeout)
+    if (this.disposed) return
+    // 8 seconds for now for refreshing user updates
+    let nextFetchTimeoutMs = 8_000
+    let messages: MessageInstance[] = []
+    try {
+      messages = await this.pullRecentMessages()
+      this.lastUserUpdatesFetch = Date.now()
+    } catch (err) {
+      nextFetchTimeoutMs = 60_000
+    }
+
+    if (this.onServerEvent && messages.length > 0) {
+      const currentUser = await this.getCurrentUser()
+      const threads = mapThreads(mapMessagesToObjects(messages, currentUser), currentUser)
+      this.onServerEvent([{
+        type: ServerEventType.STATE_SYNC,
+        objectIDs: {},
+        objectName: 'thread',
+        mutationType: 'upsert',
+        entries: threads,
+      }])
+    }
+
+    this.pollTimeout = setTimeout(this.pollUserUpdates, nextFetchTimeoutMs)
+  }
+
+  subscribeToEvents = async (onEvent: OnServerEventCallback): Promise<void> => {
+    this.onServerEvent = onEvent
+    this.pollUserUpdates()
+  }
+
+  dispose = () => {
+    this.disposed = true
+    clearTimeout(this.pollTimeout)
+  }
+
+  reconnectRealtime = () => {
+    if ((Date.now() - this.lastUserUpdatesFetch) > 5_000) this.pollUserUpdates()
+  }
 
   getCurrentUser = () => this.api.getCurrentUser()
 
@@ -75,9 +130,8 @@ export default class PlatformTwilio implements PlatformAPI {
 
     // Do initial pull of all messages and save to local DB
     const messages = await this.api.getMessagesOfNumber()
-    await this.messageDb.storeMessages(messages, number)
-
-    texts.log('Twilio.login')
+    const user = await this.api.getCurrentUser()
+    await this.messageDb.storeMessages(messages, user)
 
     return { type: 'success' }
   }
@@ -95,8 +149,6 @@ export default class PlatformTwilio implements PlatformAPI {
     token: this.api.token,
     number: this.api.number,
   })
-
-  subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
 
   onLoginEvent = (onEvent: Function) => {
     this.loginEventCallback = onEvent
