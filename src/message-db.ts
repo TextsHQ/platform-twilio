@@ -4,13 +4,14 @@ import { promises as fsp } from 'fs'
 import { dirname } from 'path'
 import { Message, Paginated, texts, Thread, User } from '@textshq/platform-sdk'
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
-import { mapMessages, mapMessagesToObjects, mapThreads } from './mappers'
+import { mapMessage, mapMessages, mapMessagesToObjects, mapThreads } from './mappers'
 
 export interface MessageObject {
   id: string
   body: string
   otherParticipant: string
   isSender: boolean
+  isRead: boolean
   timestamp: number
 }
 
@@ -21,6 +22,7 @@ export class TwilioMessageDB {
       "body" TEXT not null,
       "otherParticipant" VARCHAR(16) not null,
       "isSender" BOOLEAN not null,
+      "isRead" BOOLEAN not null default false,
       "timestamp" INTEGER not null
     );`
 
@@ -64,9 +66,19 @@ export class TwilioMessageDB {
     }
   }
 
+  readMessages = async (threadId: string, date: Date) => {
+    const readMessages = this.prepareCache('update messages set isRead = 1 where otherParticipant = ? and timestamp <= ?')
+    readMessages.run(threadId, date.getTime())
+  }
+
+  markMessageAsUnread = async (messageId: string) => {
+    const markMessageAsUnread = this.prepareCache('update messages set isRead = 0 where id = ?')
+    markMessageAsUnread.run(messageId)
+  }
+
   storeMessages = (messages: MessageInstance[], currentUser: User) => {
     const insertMessage = this.prepareCache(
-      'insert or replace into messages (id, body, otherParticipant, isSender, timestamp) values (?, ?, ?, ?, ?)',
+      'insert or replace into messages (id, body, otherParticipant, isSender, isRead, timestamp) values (?, ?, ?, ?, ?, ?)',
     )
     const messageObjects = mapMessagesToObjects(messages, currentUser)
     for (const message of messageObjects) {
@@ -75,9 +87,26 @@ export class TwilioMessageDB {
         message.body,
         message.otherParticipant,
         message.isSender ? 1 : 0,
+        message.isRead ? 1 : 0,
         message.timestamp,
       )
     }
+  }
+
+  getLatestMessageInThread = (threadId: string, currentUser: User): Message => {
+    const getLatestMessage = this.prepareCache(
+      'select * from messages where otherParticipant = ? order by timestamp desc limit 1',
+    )
+    const message = getLatestMessage.get(threadId)
+    return mapMessage(message, currentUser)
+  }
+
+  getLastReadMessageInThread = (threadId: string, currentUser: User): Message => {
+    const getLastReadMessage = this.prepareCache(
+      'select * from messages where otherParticipant = ? and isRead = 1 order by timestamp desc limit 1',
+    )
+    const message = getLastReadMessage.get(threadId)
+    return mapMessage(message, currentUser)
   }
 
   getLastTimestamp = (): Date => {
@@ -91,6 +120,14 @@ export class TwilioMessageDB {
       'select * from messages',
     ).all()
     const mappedThreads = mapThreads(threads, currentUser)
+    for (const thread of mappedThreads) {
+      const lastReadMessage = this.getLastReadMessageInThread(thread.id, currentUser)
+      const lastMessageInThread = this.getLatestMessageInThread(thread.id, currentUser)
+      thread.lastReadMessageID = lastReadMessage.id
+      if (lastReadMessage.id === lastMessageInThread.id) {
+        thread.isUnread = false
+      }
+    }
     return {
       hasMore: false,
       items: mappedThreads,
@@ -106,5 +143,12 @@ export class TwilioMessageDB {
       hasMore: false,
       items: mappedMessages,
     }
+  }
+
+  getMessageById = async (messageId: string, currentUser: User): Promise<Message> => {
+    const message: MessageObject = this.prepareCache(
+      'select * from messages where id = ?',
+    ).get(messageId)
+    return mapMessage(message, currentUser)
   }
 }

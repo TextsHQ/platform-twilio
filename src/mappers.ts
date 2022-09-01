@@ -3,10 +3,6 @@ import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import { md5 } from './util'
 import type { MessageObject } from './message-db'
 
-// We want to make {from: '+123', to: '+456'} and {from: '+456', to: '+123'}
-// to be the same thread, so they should have the same ID
-// export const getThreadId = (currentUser: string, otherParticipant: string) => md5(`${currentUser},${otherParticipant}`)
-
 export function mapMessage(message: MessageObject, currentUser: User): Message {
   return {
     _original: JSON.stringify([message]),
@@ -14,6 +10,7 @@ export function mapMessage(message: MessageObject, currentUser: User): Message {
     timestamp: new Date(+message.timestamp),
     threadID: message.otherParticipant,
     isSender: message.isSender,
+    seen: message.isRead,
     senderID: message.isSender ? currentUser.id : md5(message.otherParticipant),
     text: message.body,
   }
@@ -37,6 +34,7 @@ export function mapMessagesToObjects(messages: MessageInstance[], currentUser: U
       body: message.body,
       otherParticipant,
       isSender,
+      isRead: false,
       timestamp: message.dateSent.getTime(),
     })
   }

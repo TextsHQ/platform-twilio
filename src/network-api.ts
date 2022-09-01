@@ -54,6 +54,7 @@ export default class TwilioAPI {
       body: message.body,
       otherParticipant: message.to,
       isSender: true,
+      isRead: false,
       // using dateCreated since dateSent isn't available until message is delivered
       timestamp: message.dateCreated.getTime(),
     }

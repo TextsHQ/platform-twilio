@@ -243,7 +243,24 @@ export default class PlatformTwilio implements PlatformAPI {
     mimeType: string
   ) => Awaitable<void>
 
-  markAsUnread?: (threadID: string, messageID?: string) => Awaitable<void>
+  // if user marks thread as unread, mark the latest message unread
+  markAsUnread = async (threadID: string, messageID?: string) => {
+    const currentUser = await this.api.getCurrentUser()
+    if (messageID) {
+      await this.messageDb.markMessageAsUnread(messageID)
+    } else {
+      const latestMessage = await this.messageDb.getLatestMessageInThread(threadID, currentUser)
+      if (latestMessage) {
+        await this.messageDb.markMessageAsUnread(latestMessage.id)
+      }
+    }
+  }
+
+  sendReadReceipt = async (threadID: string, messageID: string) => {
+    const currentUser = await this.api.getCurrentUser()
+    const message = await this.messageDb.getMessageById(messageID, currentUser)
+    await this.messageDb.readMessages(threadID, message.timestamp)
+  }
 
   archiveThread?: (threadID: string, archived: boolean) => Awaitable<void>
 
@@ -301,12 +318,6 @@ export default class PlatformTwilio implements PlatformAPI {
     threadID: string,
     messageID: string,
     forEveryone?: boolean
-  ) => Awaitable<void>
-
-  sendReadReceipt: (
-    threadID: string,
-    messageID: string,
-    messageCursor?: string
   ) => Awaitable<void>
 
   addReaction?: (
