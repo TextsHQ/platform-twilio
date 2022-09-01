@@ -27,7 +27,7 @@ import { promises as fsp } from 'fs'
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import TwilioAPI from './network-api'
 import { TwilioMessageDB } from './message-db'
-import { mapMessagesToObjects, mapThreads } from './mappers'
+import { mapMessage, mapMessagesToObjects } from './mappers'
 
 const { IS_DEV } = texts
 
@@ -93,14 +93,17 @@ export default class PlatformTwilio implements PlatformAPI {
 
     if (this.onServerEvent && messages.length > 0) {
       const currentUser = await this.getCurrentUser()
-      const threads = mapThreads(mapMessagesToObjects(messages, currentUser), currentUser)
-      this.onServerEvent([{
-        type: ServerEventType.STATE_SYNC,
-        objectIDs: {},
-        objectName: 'thread',
-        mutationType: 'upsert',
-        entries: threads,
-      }])
+      const messageObjects = mapMessagesToObjects(messages, currentUser)
+      for (const messageObject of messageObjects) {
+        const message = mapMessage(messageObject, currentUser)
+        this.onServerEvent([{
+          type: ServerEventType.STATE_SYNC,
+          mutationType: 'upsert',
+          objectName: 'message',
+          objectIDs: { threadID: message.threadID },
+          entries: [message],
+        }])
+      }
     }
 
     this.pollTimeout = setTimeout(this.pollUserUpdates, nextFetchTimeoutMs)
