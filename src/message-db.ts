@@ -2,7 +2,7 @@
 import Database, { Statement } from 'better-sqlite3'
 import { promises as fsp } from 'fs'
 import { dirname } from 'path'
-import { Message, Paginated, texts, Thread, User } from '@textshq/platform-sdk'
+import { Message, texts, Thread, User } from '@textshq/platform-sdk'
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message'
 import { mapMessage, mapMessages, mapMessagesToObjects, mapThreads } from './mappers'
 
@@ -101,6 +101,7 @@ export class TwilioMessageDB {
       'select * from messages where otherParticipant = ? and isRead = 1 order by timestamp desc limit 1',
     )
     const message = getLastReadMessage.get(threadId)
+    texts.log('messageLOL', message)
     return mapMessage(message, currentUser)
   }
 
@@ -110,11 +111,11 @@ export class TwilioMessageDB {
     return new Date(timestamp + 2000)
   }
 
-  getAllThreads = async (currentUser: User): Promise<Paginated<Thread>> => {
-    const threads: MessageObject[] = this.prepareCache(
+  getAllThreads = async (currentUser: User): Promise<Thread[]> => {
+    const messages: MessageObject[] = this.prepareCache(
       'select * from messages',
     ).all()
-    const mappedThreads = mapThreads(threads, currentUser)
+    const mappedThreads = mapThreads(messages, currentUser)
     for (const thread of mappedThreads) {
       const lastReadMessage = this.getLastReadMessageInThread(thread.id, currentUser)
       const lastMessageInThread = this.getLatestMessageInThread(thread.id, currentUser)
@@ -123,21 +124,14 @@ export class TwilioMessageDB {
         thread.isUnread = false
       }
     }
-    return {
-      hasMore: false,
-      items: mappedThreads,
-    }
+    return mappedThreads
   }
 
-  getMessagesByThread = async (threadId: string, currentUser: User): Promise<Paginated<Message>> => {
+  getMessagesByThread = async (threadId: string, currentUser: User): Promise<Message[]> => {
     const messages: MessageObject[] = this.prepareCache(
       'select * from messages where otherParticipant = ?',
     ).all(threadId)
-    const mappedMessages = mapMessages(messages, currentUser)
-    return {
-      hasMore: false,
-      items: mappedMessages,
-    }
+    return mapMessages(messages, currentUser)
   }
 
   getMessageById = async (messageId: string, currentUser: User): Promise<Message> => {

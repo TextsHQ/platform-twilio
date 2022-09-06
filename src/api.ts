@@ -2,7 +2,7 @@ import {
   AccountInfo,
   ActivityType,
   Awaitable,
-  FetchInfo,
+  FetchInfo, InboxName,
   LoginCreds,
   LoginResult,
   Message,
@@ -15,7 +15,7 @@ import {
   SerializedSession,
   ServerEventType,
   texts,
-  Thread,
+  Thread, ThreadFolderName,
   User,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
@@ -154,9 +154,21 @@ export default class PlatformTwilio implements PlatformAPI {
     this.loginEventCallback = onEvent
   }
 
-  getThreads = async () => {
+  getThreads = async (inboxName: ThreadFolderName, pagination: PaginationArg): Promise<Paginated<Thread>> => {
+    if (inboxName !== InboxName.NORMAL) return
+
+    const { cursor } = pagination || { cursor: null, direction: null }
+    const index = cursor ? (+cursor || 0) : 0
+    const limit = 20
+
     const currentUser = await this.api.getCurrentUser()
-    return this.messageDb.getAllThreads(currentUser)
+    const mappedThreads = (await this.messageDb.getAllThreads(currentUser))
+      .slice(index, index + limit) // get 20 threads at a time
+    return {
+      items: mappedThreads,
+      hasMore: mappedThreads.length >= limit,
+      oldestCursor: (index + limit).toString(),
+    }
   }
 
   getMessages = async (
@@ -164,7 +176,11 @@ export default class PlatformTwilio implements PlatformAPI {
     // pagination?: PaginationArg,
   ) => {
     const currentUser = await this.api.getCurrentUser()
-    return this.messageDb.getMessagesByThread(threadID, currentUser)
+    const mappedMessages = (await this.messageDb.getMessagesByThread(threadID, currentUser))
+    return {
+      items: mappedMessages,
+      hasMore: false, // no pagination for now
+    }
   }
 
   getThreadParticipants?: (

@@ -6,13 +6,13 @@ import type { MessageObject } from './message-db'
 export function mapMessage(message: MessageObject, currentUser: User): Message {
   return {
     _original: JSON.stringify([message]),
-    id: message.id,
-    timestamp: new Date(+message.timestamp),
-    threadID: message.otherParticipant,
-    isSender: message.isSender,
-    seen: message.isRead,
-    senderID: message.isSender ? currentUser.id : md5(message.otherParticipant),
-    text: message.body,
+    id: message?.id ?? '',
+    timestamp: new Date(message?.timestamp) ?? new Date(),
+    threadID: message?.otherParticipant ?? '',
+    isSender: message?.isSender ?? false,
+    seen: message?.isRead ?? false,
+    senderID: message?.isSender ? currentUser.id : md5(message?.otherParticipant ?? ''),
+    text: message?.body ?? '',
   }
 }
 
