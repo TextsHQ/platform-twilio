@@ -243,19 +243,6 @@ export default class PlatformTwilio implements PlatformAPI {
     mimeType: string
   ) => Awaitable<void>
 
-  // if user marks thread as unread, mark the latest message unread
-  markAsUnread = async (threadID: string, messageID?: string) => {
-    const currentUser = await this.api.getCurrentUser()
-    if (messageID) {
-      await this.messageDb.markMessageAsUnread(messageID)
-    } else {
-      const latestMessage = await this.messageDb.getLatestMessageInThread(threadID, currentUser)
-      if (latestMessage) {
-        await this.messageDb.markMessageAsUnread(latestMessage.id)
-      }
-    }
-  }
-
   sendReadReceipt = async (threadID: string, messageID: string) => {
     const currentUser = await this.api.getCurrentUser()
     const message = await this.messageDb.getMessageById(messageID, currentUser)

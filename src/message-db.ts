@@ -71,11 +71,6 @@ export class TwilioMessageDB {
     readMessages.run(threadId, date.getTime())
   }
 
-  markMessageAsUnread = async (messageId: string) => {
-    const markMessageAsUnread = this.prepareCache('update messages set isRead = 0 where id = ?')
-    markMessageAsUnread.run(messageId)
-  }
-
   storeMessages = (messages: MessageInstance[], currentUser: User) => {
     const insertMessage = this.prepareCache(
       'insert or replace into messages (id, body, otherParticipant, isSender, isRead, timestamp) values (?, ?, ?, ?, ?, ?)',
