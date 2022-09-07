@@ -162,8 +162,10 @@ export default class PlatformTwilio implements PlatformAPI {
     const limit = 20
 
     const currentUser = await this.api.getCurrentUser()
+    // we only have a messages table for now, so we need to get all threads
+    // and then .slice() them instead of querying directly via the limit & offset
     const mappedThreads = (await this.messageDb.getAllThreads(currentUser))
-      .slice(index, index + limit) // get 20 threads at a time
+      .slice(index, index + limit)
     return {
       items: mappedThreads,
       hasMore: mappedThreads.length >= limit,
@@ -173,13 +175,23 @@ export default class PlatformTwilio implements PlatformAPI {
 
   getMessages = async (
     threadID: string,
-    // pagination?: PaginationArg,
+    pagination?: PaginationArg,
   ) => {
+    const { cursor } = pagination || { cursor: null, direction: null }
+    const index = cursor ? (await this.messageDb.getIndexFromCursor(threadID, cursor)) : 0
+    const limit = 20
+
     const currentUser = await this.api.getCurrentUser()
-    const mappedMessages = (await this.messageDb.getMessagesByThread(threadID, currentUser))
+    const mappedMessages = await this.messageDb.getMessagesByThread(
+      threadID,
+      currentUser,
+      limit,
+      index,
+    )
     return {
       items: mappedMessages,
-      hasMore: false, // no pagination for now
+      hasMore: mappedMessages.length >= limit,
+      oldestCursor: (index + limit).toString(),
     }
   }
 

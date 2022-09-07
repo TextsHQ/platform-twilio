@@ -128,11 +128,21 @@ export class TwilioMessageDB {
     return mappedThreads
   }
 
-  getMessagesByThread = async (threadId: string, currentUser: User): Promise<Message[]> => {
+  getMessagesByThread = async (
+    threadId: string,
+    currentUser: User,
+    limit?: number,
+    offset?: number,
+  ): Promise<Message[]> => {
     const messages: MessageObject[] = this.prepareCache(
-      'select * from messages where otherParticipant = ?',
-    ).all(threadId)
-    return mapMessages(messages, currentUser)
+      `select *
+        from messages
+        where otherParticipant = ?
+        order by timestamp desc
+        limit ?
+        offset ?`,
+    ).all(threadId, limit, offset)
+    return mapMessages(messages, currentUser).reverse()
   }
 
   getMessageById = async (messageId: string, currentUser: User): Promise<Message> => {
@@ -140,5 +150,11 @@ export class TwilioMessageDB {
       'select * from messages where id = ?',
     ).get(messageId)
     return mapMessage(message, currentUser)
+  }
+
+  getIndexFromCursor = async (threadID: string, cursor: string): Promise<number> => {
+    const { timestamp } = this.prepareCache('select timestamp from messages where id = ?').get(cursor)
+    const count = this.prepareCache('select count(*) as count from messages where otherParticipant = ? and timestamp >= ?').get(threadID, timestamp)
+    return count.count
   }
 }
