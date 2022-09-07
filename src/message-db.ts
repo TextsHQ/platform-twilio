@@ -92,7 +92,7 @@ export class TwilioMessageDB {
     const getLatestMessage = this.prepareCache(
       'select * from messages where otherParticipant = ? order by timestamp desc limit 1',
     )
-    const message = getLatestMessage.get(threadId)
+    const message: MessageObject = getLatestMessage.get(threadId)
     return mapMessage(message, currentUser)
   }
 
@@ -100,14 +100,13 @@ export class TwilioMessageDB {
     const getLastReadMessage = this.prepareCache(
       'select * from messages where otherParticipant = ? and isRead = 1 order by timestamp desc limit 1',
     )
-    const message = getLastReadMessage.get(threadId)
-    texts.log('messageLOL', message)
+    const message: MessageObject = getLastReadMessage.get(threadId)
     return mapMessage(message, currentUser)
   }
 
   getLastTimestamp = (): Date => {
     const { timestamp } = this.prepareCache('select max(timestamp) as timestamp from messages').get()
-    // add 1 second to avoid duplicate messages with twilio DB
+    // add 2 second to avoid duplicate messages with twilio DB
     return new Date(timestamp + 2000)
   }
 
@@ -119,9 +118,11 @@ export class TwilioMessageDB {
     for (const thread of mappedThreads) {
       const lastReadMessage = this.getLastReadMessageInThread(thread.id, currentUser)
       const lastMessageInThread = this.getLatestMessageInThread(thread.id, currentUser)
-      thread.lastReadMessageID = lastReadMessage.id
-      if (lastReadMessage.id === lastMessageInThread.id) {
-        thread.isUnread = false
+      if (lastReadMessage !== null) {
+        thread.lastReadMessageID = lastReadMessage.id
+        if (lastReadMessage.id === lastMessageInThread.id) {
+          thread.isUnread = false
+        }
       }
     }
     return mappedThreads
