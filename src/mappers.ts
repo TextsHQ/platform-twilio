@@ -55,7 +55,6 @@ export function mapThreads(messages: MessageObject[], currentUser: User): Thread
   const threads = []
   for (const [threadId, threadMessages] of threadToMessageMapping) {
     const messagesInThread = threadMessages[0]
-    // threadMessages[0].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
     const otherParticipant = threadMessages[1]
     const otherParticipantUser: User = {
       id: md5(otherParticipant),
@@ -75,6 +74,7 @@ export function mapThreads(messages: MessageObject[], currentUser: User): Thread
       },
       messages: {
         hasMore: true,
+        // load first message for preview to show up
         items: [messagesInThread[messagesInThread.length - 1]],
       },
       // we only support 1-1 messaging on twilio

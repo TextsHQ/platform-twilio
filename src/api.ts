@@ -178,7 +178,9 @@ export default class PlatformTwilio implements PlatformAPI {
     pagination?: PaginationArg,
   ) => {
     const { cursor } = pagination || { cursor: null, direction: null }
-    const index = cursor ? (await this.messageDb.getIndexFromCursor(threadID, cursor)) : 0
+    const cursorTimestamp = cursor
+      ? await this.messageDb.getTimestampFromCursor(threadID, cursor)
+      : (await this.messageDb.getLastTimestamp()).getTime()
     const limit = 20
 
     const currentUser = await this.api.getCurrentUser()
@@ -186,12 +188,12 @@ export default class PlatformTwilio implements PlatformAPI {
       threadID,
       currentUser,
       limit,
-      index,
+      cursorTimestamp,
     )
     return {
       items: mappedMessages,
       hasMore: mappedMessages.length >= limit,
-      oldestCursor: (index + limit).toString(),
+      oldestCursor: cursor,
     }
   }
 

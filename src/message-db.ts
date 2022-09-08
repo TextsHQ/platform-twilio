@@ -107,7 +107,9 @@ export class TwilioMessageDB {
   getLastTimestamp = (): Date => {
     const { timestamp } = this.prepareCache('select max(timestamp) as timestamp from messages').get()
     // add 2 second to avoid duplicate messages with twilio DB
-    return new Date(timestamp + 2000)
+    return timestamp
+      ? new Date(timestamp + 2000)
+      : null
   }
 
   getAllThreads = async (currentUser: User): Promise<Thread[]> => {
@@ -132,16 +134,16 @@ export class TwilioMessageDB {
     threadId: string,
     currentUser: User,
     limit?: number,
-    offset?: number,
+    cursorTimestamp?: number,
   ): Promise<Message[]> => {
     const messages: MessageObject[] = this.prepareCache(
       `select *
         from messages
         where otherParticipant = ?
+        and timestamp < ?
         order by timestamp desc
-        limit ?
-        offset ?`,
-    ).all(threadId, limit, offset)
+        limit ?`,
+    ).all(threadId, cursorTimestamp, limit)
     return mapMessages(messages, currentUser).reverse()
   }
 
@@ -152,9 +154,8 @@ export class TwilioMessageDB {
     return mapMessage(message, currentUser)
   }
 
-  getIndexFromCursor = async (threadID: string, cursor: string): Promise<number> => {
+  getTimestampFromCursor = async (threadID: string, cursor: string): Promise<number> => {
     const { timestamp } = this.prepareCache('select timestamp from messages where id = ?').get(cursor)
-    const count = this.prepareCache('select count(*) as count from messages where otherParticipant = ? and timestamp >= ?').get(threadID, timestamp)
-    return count.count
+    return +timestamp
   }
 }
