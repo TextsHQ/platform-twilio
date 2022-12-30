@@ -36,7 +36,7 @@ const info: PlatformInfo = {
     + '</svg>',
   loginMode: 'browser',
   browserLogins: [{
-    loginURL: 'https://twilio.com/login',
+    url: 'https://twilio.com/login',
     // authCookieName: 'server-identity',
     runJSOnNavigate: onNavigate,
     runJSOnClose: 'JSON.stringify(window.twilioApiCreds)',
